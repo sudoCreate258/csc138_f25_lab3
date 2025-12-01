@@ -15,7 +15,6 @@ class BaseLab:
         self.text = "\n".join(pages)
 
         self._extract_github_fields()
-        self._validate()
         return self
 
     def _extract_github_fields(self):
@@ -26,18 +25,17 @@ class BaseLab:
             if "hash" in l:
                 self.commit_hash = line.split(":")[-1].strip()
 
-    def _validate(self):
-        assert self.github_user, f"Lab {self.lab_number}: Missing GitHub username."
-        assert self.commit_hash, f"Lab {self.lab_number}: Missing commit hash."
-
+    def __str__(self):
+        return (
+            f"Lab {self.lab_number}\n"
+            f"  GitHub Username: {self.github_user}\n"
+            f"  Commit Hash:     {self.commit_hash}\n"
+            f"  Summary Length:  {len(self.text)} characters"
+        )
 
 class Lab0(BaseLab):
-    def _validate(self):
-        super()._validate()
-
+    def contains_image(self):
         reader = PdfReader(self.file_path)
-        found_image = False
-
         for page in reader.pages:
             resources = page.get('/Resources', {})
             xobj = resources.get('/XObject', {})
@@ -45,18 +43,22 @@ class Lab0(BaseLab):
                 for name in xobj.keys():
                     obj = xobj[name]
                     if obj.get("/Subtype") == "/Image":
-                        found_image = True
+                        return True
+        return False
 
-        assert found_image, "Lab0: Expected at least one image in the PDF."
-
+    def __str__(self):
+        base = super().__str__()
+        return (
+            f"Lab0 Special:    Image Detected = " + {str(self.contains_image()} 
+            f"  Summary Length:  {len(self.text)} characters"
+        )
 
 def load_lab(pdf_path):
     filename = os.path.basename(pdf_path)
     name = os.path.splitext(filename)[0]
 
-    # Determining lab number is domain logic → OK to keep here
     try:
-        lab_num = int(name[3:])  # "lab12" → 12
+        lab_num = int(name[3:])
     except:
         raise AssertionError(f"Invalid filename (expected labN.pdf): {filename}")
 
